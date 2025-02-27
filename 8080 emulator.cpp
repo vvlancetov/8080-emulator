@@ -111,7 +111,7 @@ Genius keyboard;
 
 vector<int> commands;
 vector<string> comments;
-string filename = "Busicom.txt"; //имя входного файла
+string filename = "memtest32.txt"; //имя входного файла
 
 //регистры процессора
 int ACC; //Accumulator
@@ -127,12 +127,12 @@ vector<int>ram_ports; //порты RAM
 int program_counter; //счетчик команд
 
 // флаги для изменения работы
-bool step_mode = false; //ждать ли нажатия пробела для выполнения команд
+bool step_mode = true; //ждать ли нажатия пробела для выполнения команд
 bool go_forward; //переменная для выхода из цикла обработки нажатий
-bool RU_lang = false; //локализация
-bool list_at_start = false; //вывод листинга на старте
-bool log_to_console = false; //логирование команд на консоль
-bool short_print = true; //сокращенный набор регистров для вывода
+bool RU_lang = true; //локализация
+bool list_at_start = true; //вывод листинга на старте
+bool log_to_console = true; //логирование команд на консоль
+bool short_print = false; //сокращенный набор регистров для вывода
 
 void print_all();
 void list();
@@ -163,7 +163,6 @@ int main(int argc, char* argv[]) {
         if (s.substr(0, 3) == "-ru")
         {
             //использование русского языка
-            setlocale(LC_ALL, "Russian");
             RU_lang = true;
             cout << "set RU lang" << endl;
         }
@@ -186,6 +185,8 @@ int main(int argc, char* argv[]) {
             cout << "set log to console ON" << endl;
         }
     }
+
+    if (RU_lang) setlocale(LC_ALL, "Russian");
 
     if (!log_to_console)
     {
