@@ -62,6 +62,7 @@ sf::Clock video_clock;
 
 //счетчики
 unsigned int op_counter = 0;
+unsigned int service_counter = 0;
 
 class Mem_Ctrl // контроллер памяти
 {
@@ -82,6 +83,7 @@ public:
 
 	void write(unsigned __int16 address, unsigned __int8 data); //запись значений в ячейки
 	unsigned __int8 read(unsigned __int16 address); //чтение данных из памяти
+	void flash_rom(unsigned __int16 address, unsigned __int8 data); //запись в ПЗУ
 };
 
 Mem_Ctrl memory(0); //создаем контроллер памяти
@@ -125,7 +127,7 @@ private:
 	int counter = 0;
 	sf::Clock cursor_clock;				//таймер мигания курсора
 	bool cursor_flipflop = false;		//переменная для мигания
-	int speed_history[11] = { 50000 };
+	int speed_history[33] = { 100000 };
 	unsigned __int8 command_reg = 0;	//регистр команд
 	unsigned __int8 count_param = 0;	//количество параметров для обработки
 	unsigned __int8 status = 0;         //регистр статуса
@@ -141,16 +143,16 @@ private:
 	bool int_enable = false;			//разрешение прерываний
 	bool int_request = false;			//устанавливается каждый раз после отображения экрана
 	bool improper_command = false;		//ошибка в параметрах
-	unsigned __int8 cursor_x = 1;		//позиция курсора
-	unsigned __int8 cursor_y = 1;
-	unsigned __int8 display_lines = 16;  //кол-во строк на экране
-	unsigned __int8 display_columns = 64;//кол-во столбцов на экране
-	unsigned __int8 under_line_pos = 9;	 //позиция линии подчеркивания (по высоте)
-	unsigned __int8 line_height = 10;	 //высота строки в пикселях
+	unsigned __int8 cursor_x = 0;		//позиция курсора
+	unsigned __int8 cursor_y = 0;
+	unsigned __int8 display_lines = 30;  //кол-во строк на экране
+	unsigned __int8 display_columns = 78;//кол-во столбцов на экране
+	unsigned __int8 under_line_pos = 10;	 //позиция линии подчеркивания (по высоте)
 	unsigned __int8 cursor_format = 1;	 //формат курсора: 0 - мигающий блок, 1 - мигающий штрих, 2 - инверсный блок, 3 - немигающий штрих
 	bool transp_attr = true;			 //невидимый атрибут поля (при установке специальных атрибутов) 0 - невидимый, 1 - обычный (с разрывами)
 
 public:
+	unsigned __int8 line_height = 10;	 //высота строки в пикселях
 	Video_device();							// конструктор класса
 	void sync(int elapsed_ms);				//импульс синхронизации
 	void set_command(unsigned __int8 data); //команда контроллеру
@@ -208,7 +210,7 @@ class SoundMaker //класс звуковой карты
 private:
 
 	int signal_on = -1;					//наличие сигнала на входе
-	unsigned int waves[14] = { 0 };     //подсчет импульсов
+	unsigned int waves[20] = { 0 };     //подсчет импульсов
 	int pointer = 0;					//указатель массива
 	unsigned int silense_dur = 0;		//счетчик тишины
 	bool empty = true;					//буфер пуст (для включения очистки буфера)
@@ -251,16 +253,18 @@ string filename_ROM = "86RK32.txt"; //типовая прошивка
 //string filename_HDD = "TETRIS4.txt";  //  3000 - норм
 //string filename_HDD = "klad.txt";     //  0000 - норм
 //string filename_HDD = "glass1.txt";   //  0000 - норм
-string filename_HDD = "diverse.txt";	//  0000 - норм
+//string filename_HDD = "diverse.txt";	//  0000 - норм
 //string filename_HDD = "vmemtest.txt"; //  0000 - тест видеопамяти
 //string filename_HDD = "formula.txt";  //  0000 - гонки
-//string filename_HDD = "sirius.txt";     //  0000  - не видно врагов, что-то с атрибутами
+//string filename_HDD = "sirius.txt";   //  0000  - не видно врагов, что-то с атрибутами
 //string filename_HDD = "xonix.txt";    //  0000 - норм
 //string filename_HDD = "test.txt";
 //string filename_HDD = "pack.txt";     //  1800 вылетает
 //string filename_HDD = "pacman.txt";   //  0000 - норм
-//string filename_HDD = "music.txt";    //  0000
-//string filename_HDD = "rk86_basic.txt"; //0000 - глючит
+//string filename_HDD = "music.txt";    //   0000
+//string filename_HDD = "rk86_basic.txt"; // 0000 - зависает
+//string filename_HDD = "stena.txt";	 //  0000 - норм
+string filename_HDD = "pi80.txt";	    //	 4200
 
 unsigned __int16 program_counter = 0xf800; //первая команда при старте ПК
 int first_address_ROM = 0xF800;			   // адрес загрузки ROM (прошивки)
@@ -268,7 +272,6 @@ int first_address_ROM = 0xF800;			   // адрес загрузки ROM (про�
 vector<int> breakpoints;                   //точки останова
 string tmp_s;
 #endif
-
 
 //количество памяти в ПК
 int RAM_amount = 32;
@@ -318,7 +321,7 @@ string get_sym(int code);
 
 int main(int argc, char* argv[]) {
 #ifdef DEBUG
-	//breakpoints.push_back(0x0);
+	//breakpoints.push_back(0x4200);
 	//breakpoints.push_back(0x0161);
 	//breakpoints.push_back(0x0160);
 	//breakpoints.push_back(0xFCBA);
@@ -419,7 +422,7 @@ int main(int argc, char* argv[]) {
 	while (getline(file, line)) {
 		stringstream ss(line);
 		if (ss >> number) { // Проверяем, есть ли число в начале строки
-			memory.write(line_number, number); //пишем в память
+			memory.flash_rom(line_number, number); //пишем в память
 			line_number++;
 			line_count++;
 		}
@@ -467,7 +470,7 @@ int main(int argc, char* argv[]) {
 			stringstream ss(line);
 			if (ss >> number) { // Проверяем, есть ли число в начале строки
 				HDD.write_byte(number); //пишем в память
-				memory.write(line_count, number);//пишем сразу в RAm
+				memory.write(line_count + 0x4200, number);//пишем сразу в RAm
 					
 				line_count++;
 			}
@@ -518,11 +521,10 @@ int main(int argc, char* argv[]) {
 	//основной цикл программы
 	while (1)
 	{
-		//счетчик операций
-		op_counter++;
+		op_counter++;   //счетчик операций
+		service_counter++;  //счетчик для вызова служебных процедур
 
 		//перехват системных вызовов
-
 		if (program_counter == 0xFCBA) void syscallF809();
 #ifdef DEBUG
 		//переход в пошаговый режим при попадании в точку останова
@@ -540,87 +542,106 @@ int main(int argc, char* argv[]) {
 		//monitor.comm1 = int_to_hex((int)memory.read(0x2b + 1)) + "   " + int_to_hex((int)memory.read(0x2b)) + "  " + int_to_hex((int)memory.read(0x38)) + "  " + int_to_hex((int)memory.read(0x37));
 		//monitor.comm2 = to_string(memory.read(0x37)) + " " + to_string(memory.read(0x37 + 1));
 #endif
+		//std::this_thread::sleep_for(std::chrono::nanoseconds(1)); //торможение
 
-		go_forward = false;
-		if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) &&
-			!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) &&
-			!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8) &&
-			!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) &&
-			!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7) &&
-			!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6)) keys_up = true;
-
-		//вызываем видеоадаптер по таймеру
-		
-		if(video_clock.getElapsedTime().asMicroseconds() > 20000)
+		//служебные подпрограммы
+		if (service_counter == 1000)
 		{
-			video_clock.stop();
-			monitor.sync(video_clock.getElapsedTime().asMicroseconds()); //синхроимпульс для монитора
-			video_clock.restart();
-			op_counter = 0;
-		}
-
-		//синхронизация звука
-		speaker.sync();
-
-		//мониторинг нажатия клавиш в обычном режиме
-
-		//проверяем нажатие кнопки P
-		//if (pressed_key == 112 || pressed_key == 167 || pressed_key == 80 || pressed_key == 135) step_mode = !step_mode;
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) && keys_up) { step_mode = !step_mode; keys_up = false; }
-
-		//проверяем нажатие кнопки C
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) && keys_up) { log_to_console = !log_to_console; keys_up = false; }
-		//if (pressed_key == 99 || pressed_key == 67 || pressed_key == 225 || pressed_key == 145) log_to_console = !log_to_console;
-
-		//выводим содержимое регистров если эмулятор работает в обычном режиме
-		if (!step_mode && !log_to_console && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) && keys_up) { print_all();  keys_up = false; }
-
-		//restart
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7) && keys_up) restart = true;
-
-		//смена видеоережима для разных систем 32/64 КБ
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6) && keys_up) {
-			if (RAM_amount == 16) RAM_amount = 32;
-			else RAM_amount = 16;
-			keys_up = false;
-		}
-
-		//задержка вывода по нажатию кнопки в пошаговом режиме
-		while (!go_forward && step_mode)
-		{
+			service_counter = 0;
+			go_forward = false;
 
 			if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) &&
-				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6) &&
 				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) &&
 				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8) &&
 				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) &&
 				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7) &&
-				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) keys_up = true;
+				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F1) &&
+				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F2) &&
+				!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6)) keys_up = true;
+
+			//вызываем видеоадаптер по таймеру
+
+			if (video_clock.getElapsedTime().asMicroseconds() > 20000)
+			{
+				video_clock.stop();
+				monitor.sync(video_clock.getElapsedTime().asMicroseconds()); //синхроимпульс для монитора
+				//cout << dec << "OP_count = " << op_counter << "  time (ms) = " << video_clock.getElapsedTime().asMicroseconds() << hex << endl;
+				video_clock.restart();
+				op_counter = 0;
+			}
 
 
-			myclock.stop();
-			//засыпаем, чтобы не загружать процессор
-			//while (!_kbhit()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
-			std::this_thread::sleep_for(std::chrono::milliseconds(10));
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) && keys_up) { step_mode = !step_mode; keys_up = false; myclock.start(); }
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) && keys_up) { print_all(); keys_up = false; }
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8) && keys_up) { go_forward = true; }
+
+			//мониторинг нажатия клавиш в обычном режиме
+#ifdef DEBUG
+		//проверяем нажатие кнопки P
+		//if (pressed_key == 112 || pressed_key == 167 || pressed_key == 80 || pressed_key == 135) step_mode = !step_mode;
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) && keys_up) { step_mode = !step_mode; keys_up = false; }
+
+			//проверяем нажатие кнопки C
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) && keys_up) { log_to_console = !log_to_console; keys_up = false; }
+			//if (pressed_key == 99 || pressed_key == 67 || pressed_key == 225 || pressed_key == 145) log_to_console = !log_to_console;
+#endif
+
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F1) && keys_up) { monitor.line_height--; keys_up = false; }
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F2) && keys_up) { monitor.line_height++; keys_up = false; }
+#ifdef DEBUG
+			//выводим содержимое регистров если эмулятор работает в обычном режиме
+			if (!step_mode && !log_to_console && sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) && keys_up) { print_all();  keys_up = false; }
+#endif
+			//restart
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7) && keys_up) restart = true;
+
+			//смена видеоережима для разных систем 32/64 КБ
 			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6) && keys_up) {
 				if (RAM_amount == 16) RAM_amount = 32;
 				else RAM_amount = 16;
 				keys_up = false;
 			}
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) && keys_up) { log_to_console = !log_to_console; keys_up = false; }
-			//if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && keys_up) { go_forward = true;}
-			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7)) restart = true;
 
-			if (!step_mode) {
-				go_forward = true;
-				std::this_thread::sleep_for(std::chrono::milliseconds(500));
-				break;
-			}
-			else monitor.sync(0); //синхроимпульс для монитора
-		};
+
+
+			//задержка вывода по нажатию кнопки в пошаговом режиме
+			while (!go_forward && step_mode)
+			{
+
+				if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) &&
+					!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6) &&
+					!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) &&
+					!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8) &&
+					!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) &&
+					!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7) &&
+					!sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) keys_up = true;
+
+
+				myclock.stop();
+				//засыпаем, чтобы не загружать процессор
+				//while (!_kbhit()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+				std::this_thread::sleep_for(std::chrono::milliseconds(10));
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F9) && keys_up) { step_mode = !step_mode; keys_up = false; myclock.start(); }
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F12) && keys_up) { print_all(); keys_up = false; }
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F8) && keys_up) { go_forward = true; }
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F6) && keys_up) {
+					if (RAM_amount == 16) RAM_amount = 32;
+					else RAM_amount = 16;
+					keys_up = false;
+				}
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F10) && keys_up) { log_to_console = !log_to_console; keys_up = false; }
+				//if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space) && keys_up) { go_forward = true;}
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::F7)) restart = true;
+
+				if (!step_mode) {
+					go_forward = true;
+					std::this_thread::sleep_for(std::chrono::milliseconds(500));
+					break;
+				}
+				else monitor.sync(0); //синхроимпульс для монитора
+			};
+
+		}
+
+		//синхронизация звука
+		speaker.sync();
 
 		//основной цикл 
 #ifdef DEBUG
@@ -1252,7 +1273,9 @@ int main(int argc, char* argv[]) {
 			else Flag_Zero = true;
 			Flag_Sign = (registers[7] >> 7) & 1;
 			Flag_Parity = ~registers[7] & 1;
+#ifdef DEBUG
 			if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t\tSUB A - IMM(" << (int)memory.read(program_counter + 1) << ") = " << registers[7] << endl;
+#endif			
 			program_counter += 2;
 			continue;
 		}
@@ -1349,13 +1372,14 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = ~temp_ACC_16 & 1;
 				memory.write(temp_Addr, (temp_ACC_16 & 255));
-
+#ifdef DEBUG
 				if (log_to_console) {
 					cout << "\t\tINC Mem at [";
 					SetConsoleTextAttribute(hConsole, 10);
 					cout << (int)temp_Addr;
 					SetConsoleTextAttribute(hConsole, 7); cout << "] = " << (int)temp_ACC_16 << endl;
 				}
+#endif
 				program_counter++;
 				continue;
 			}
@@ -1376,7 +1400,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (registers[Dest] >> 7) & 1;
 				Flag_Parity = ~registers[Dest] & 1;
 				string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tDEC " << regnames[Dest] << "(" << (int)temp_ACC_8 << ") = " << (int)registers[Dest] << " " << flags << endl;
+#endif
 				program_counter++;
 				continue;
 			}
@@ -1394,7 +1420,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = ~temp_ACC_16 & 1;
 				string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tDEC Mem(" << temp_ACC_8 << ") at " << (int)temp_Addr << " = " << (int)(temp_ACC_16 & 255) << " " << flags << endl;
+#endif
 				program_counter++;
 				continue;
 			}
@@ -1411,7 +1439,9 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = (temp_ACC_16 << 8) + registers[1] + 1;
 				registers[1] = temp_ACC_16 & 255;
 				registers[0] = temp_ACC_16 >> 8;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tINC BC = " << (int)temp_ACC_16 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1422,7 +1452,9 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = (temp_ACC_16 << 8) + registers[3] + 1;
 				registers[3] = temp_ACC_16 & 255;
 				registers[2] = temp_ACC_16 >> 8;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tINC DE = " << (int)temp_ACC_16 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1433,7 +1465,9 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = (temp_ACC_16 << 8) + registers[5] + 1;
 				registers[5] = temp_ACC_16 & 255;
 				registers[4] = temp_ACC_16 >> 8;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tINC HL = " << (int)temp_ACC_16 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1441,7 +1475,9 @@ int main(int argc, char* argv[]) {
 			{
 				//увеличиваем SP на 1
 				stack_pointer++;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tINC SP = " << (int)stack_pointer << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1459,7 +1495,9 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = (temp_ACC_16 << 8) + registers[1] - 1;
 				registers[1] = temp_ACC_16 & 255;
 				registers[0] = temp_ACC_16 >> 8;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tDEC BC = " << temp_ACC_16 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1470,7 +1508,9 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = (temp_ACC_16 << 8) + registers[3] - 1;
 				registers[3] = temp_ACC_16 & 255;
 				registers[2] = temp_ACC_16 >> 8;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tDEC DE = " << temp_ACC_16 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1481,7 +1521,9 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = (temp_ACC_16 << 8) + registers[5] - 1;
 				registers[5] = temp_ACC_16 & 255;
 				registers[4] = temp_ACC_16 >> 8;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tDEC HL = " << temp_ACC_16 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1489,7 +1531,9 @@ int main(int argc, char* argv[]) {
 			{
 				//уменьшаем SP на 1
 				stack_pointer--;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tDEC SP = " << stack_pointer << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1508,7 +1552,9 @@ int main(int argc, char* argv[]) {
 				Flag_Carry = (new_reg >> 16) & 1;
 				registers[4] = (new_reg >> 8) & 255;
 				registers[5] = new_reg & 255;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tHL + BC = " << registers[5] + registers[4] * 256 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1519,8 +1565,9 @@ int main(int argc, char* argv[]) {
 				Flag_Carry = (new_reg >> 16) & 1;
 				registers[4] = (new_reg >> 8) & 255;
 				registers[5] = new_reg & 255;
-
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tHL + DE = " << registers[5] + registers[4] * 256 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1531,7 +1578,9 @@ int main(int argc, char* argv[]) {
 				Flag_Carry = (new_reg >> 16) & 1;
 				registers[4] = (new_reg >> 8) & 255;
 				registers[5] = new_reg & 255;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tHL + HL = " << registers[5] + registers[4] * 256 << endl;
+#endif
 				program_counter += 1;
 				continue;
 
@@ -1544,7 +1593,9 @@ int main(int argc, char* argv[]) {
 				Flag_Carry = (new_reg >> 16) & 1;
 				registers[4] = (new_reg >> 8) & 255;
 				registers[5] = new_reg & 255;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tHL + SP = " << registers[5] + registers[4] * 256 << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1561,21 +1612,23 @@ int main(int argc, char* argv[]) {
 				temp_ACC_16 = temp_ACC_16 + 6;
 				Flag_A_Carry = true;
 			}
-			temp_ACC_8 = (temp_ACC_16 >> 4) & 15;
+			temp_ACC_8 = (temp_ACC_16 >> 4) & 31; //старшие 4 бита
 
 			if (temp_ACC_8 > 9 || Flag_Carry)
 			{
-				temp_ACC_16 += 96; // +6 к старшим битам
-				Flag_Carry = true;
-				//Flag_Carry = (temp_ACC_16 >> 8) & 1;
+				temp_ACC_8 += 6; // +6 к старшим битам
+				if (temp_ACC_8 > 15) Flag_Carry = true;
+				temp_ACC_8 = temp_ACC_8 & 15;
 			}
-			registers[7] = temp_ACC_16 & 255;
+			registers[7] = (temp_ACC_16 & 15) | (temp_ACC_8 << 4);
 
 			if (registers[7]) Flag_Zero = false;
 			else Flag_Zero = true;
 			Flag_Sign = (registers[7] >> 7) & 1;
 			Flag_Parity = (~registers[7]) & 1;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tDAA (" << (int)(registers[7] >> 4) << ")(" << (int)(registers[7] & 15) << ") CY= " << Flag_Carry << " CA= " << Flag_A_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -1596,8 +1649,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = (~temp_ACC_16) & 1;
 				registers[7] = temp_ACC_16;
-				
+#ifdef DEBUG
 				if (log_to_console) cout << "\tACC AND " << registers[Src] << " = " << registers[7] << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1610,7 +1664,7 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = (~temp_ACC_16) & 1;
 				registers[7] = temp_ACC_16;
-
+#ifdef DEBUG
 				if (log_to_console) {
 					cout << "\tACC AND M at [";
 					SetConsoleTextAttribute(hConsole, 10);
@@ -1618,6 +1672,7 @@ int main(int argc, char* argv[]) {
 					SetConsoleTextAttribute(hConsole, 7);
 					cout << "] = " << registers[7] << endl;
 				}
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1634,8 +1689,9 @@ int main(int argc, char* argv[]) {
 			Flag_Sign = (temp_ACC_16 >> 7) & 1;
 			Flag_Parity = (~temp_ACC_16) & 1;
 			registers[7] = temp_ACC_16;
-
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tACC AND IMM(" << (int)memory.read(program_counter + 1) << ") = " << registers[7] << endl;
+#endif
 			program_counter += 2;
 			continue;
 		}
@@ -1656,8 +1712,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = (~temp_ACC_16) & 1;
 				registers[7] = temp_ACC_16;
-				
+#ifdef DEBUG
 				if (log_to_console) cout << "XOR " << regnames[Src] << "(" << (bitset<8>)registers[Src] << ") = " << (bitset<8>)registers[7] << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1672,8 +1729,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = (~temp_ACC_16) & 1;
 				registers[7] = temp_ACC_16;
-
+#ifdef DEBUG
 				if (log_to_console) cout << "XOR M[HL] at " << (bitset<8>)(registers[4] * 256 + registers[5]) << " = " << (bitset<8>)registers[7] << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1692,8 +1750,9 @@ int main(int argc, char* argv[]) {
 			Flag_Sign = (temp_ACC_16 >> 7) & 1;
 			Flag_Parity = (~temp_ACC_16) & 1;
 			registers[7] = temp_ACC_16;
-
+#ifdef DEBUG
 			if (log_to_console) cout << "\tXOR IMM (" << (bitset<8>)memory.read(program_counter + 1) << ") = " << (bitset<8>)registers[7] << endl;
+#endif
 			program_counter += 2;
 			continue;
 		}
@@ -1713,8 +1772,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = (~temp_ACC_16) & 1;
 				registers[7] = temp_ACC_16;
-
+#ifdef DEBUG
 				if (log_to_console) cout << " OR " << regnames[Src] << "(" << registers[Src] << ") = " << registers[7] << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1728,7 +1788,9 @@ int main(int argc, char* argv[]) {
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = (~temp_ACC_16) & 1;
 				registers[7] = temp_ACC_16;
+#ifdef DEBUG
 				if (log_to_console) cout << "OR M[HL] at " << registers[4] * 256 + registers[5] << " = " << registers[7] << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1747,8 +1809,9 @@ int main(int argc, char* argv[]) {
 			Flag_Sign = (temp_ACC_16 >> 7) & 1;
 			Flag_Parity = (~temp_ACC_16) & 1;
 			registers[7] = temp_ACC_16;
-
+#ifdef DEBUG
 			if (log_to_console) cout << " OR IMM (" << (int)memory.read(program_counter + 1) << ") = " << registers[7] << endl;
+#endif
 			program_counter += 2;
 			continue;
 		}
@@ -1768,8 +1831,9 @@ int main(int argc, char* argv[]) {
 				else Flag_Zero = true;
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = ~registers[7] & 1;
-				
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with " << regnames[Src] << "(" << registers[Src] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1785,8 +1849,9 @@ int main(int argc, char* argv[]) {
 				else Flag_Zero = true;
 				Flag_Sign = (temp_ACC_16 >> 7) & 1;
 				Flag_Parity = ~registers[7] & 1;
-
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tACC Comp with M at " << (int)(registers[4] * 256 + registers[5]) << " Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -1805,30 +1870,33 @@ int main(int argc, char* argv[]) {
 			else Flag_Zero = true;
 			Flag_Sign = (temp_ACC_16 >> 7) & 1;
 			Flag_Parity = ~registers[7] & 1;
-			
+#ifdef DEBUG
 			if (log_to_console) cout << "\tACC(" << registers[7] << ") Comp with IMM(" << (int)memory.read(program_counter + 1) << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 2;
 			continue;
 		}
 		//Rotate left
 		if (memory.read(program_counter) == 7)
 		{
-
 			Flag_Carry = (registers[7] >> 7) & 1;
 			registers[7] = (registers[7] << 1) & 255;
 			registers[7] = registers[7] | Flag_Carry;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tRotate left ACC = " << (bitset<8>)registers[7] << " CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
 		//Rotate right
 		if (memory.read(program_counter) == 15)
 		{
-
 			Flag_Carry = registers[7] & 1;
 			registers[7] = registers[7] >> 1;
 			registers[7] = registers[7] | 128 * Flag_Carry;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tRotate right ACC = " << (bitset<8>)registers[7] << " CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -1839,7 +1907,9 @@ int main(int argc, char* argv[]) {
 			registers[7] = (registers[7] << 1) & 255;
 			registers[7] = registers[7] | Flag_Carry;
 			Flag_Carry = tmp;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tRotate left through CY ACC = " << (bitset<8>)registers[7] << " CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -1850,16 +1920,22 @@ int main(int argc, char* argv[]) {
 			registers[7] = registers[7] >> 1;
 			registers[7] = registers[7] + Flag_Carry * 128;
 			Flag_Carry = tmp;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tRotate right through CY ACC = " << (bitset<8>)registers[7] << " CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
 		//Complement accumulator
 		if (memory.read(program_counter) == 47)
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tInvert ACC(" << (bitset<8>)registers[7] << ")";
+#endif
 			registers[7] = (~registers[7]) & 255;
+#ifdef DEBUG
 			if (log_to_console) cout << " = " << (int)(registers[7]) << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -1867,7 +1943,9 @@ int main(int argc, char* argv[]) {
 		if (memory.read(program_counter) == 63)
 		{
 			Flag_Carry = !Flag_Carry;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tInvert CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -1875,7 +1953,9 @@ int main(int argc, char* argv[]) {
 		if (memory.read(program_counter) == 55)
 		{
 			Flag_Carry = true;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tset CY = " << Flag_Carry << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -1883,32 +1963,39 @@ int main(int argc, char* argv[]) {
 		//Jump
 		if (memory.read(program_counter) == 195 || memory.read(program_counter) == 203) // 203 - недокументированная
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t" << (int)memory.read(program_counter + 2) << "\t";
+#endif
 			program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 			if (log_to_console) cout << "jump to " << (int)program_counter << endl;
+#endif
 			continue;
 		}
 		//Call
 		if (memory.read(program_counter) == 205 || memory.read(program_counter) == 221 || memory.read(program_counter) == 237 || memory.read(program_counter) == 253) // три последние недокументированные
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t" << (int)memory.read(program_counter + 2) << "\t";
-
+#endif
 			memory.write(stack_pointer - 1, (program_counter + 3) >> 8);
 			memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 			stack_pointer -= 2;
 			program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 			if (log_to_console) cout << "CALL -> " << (int)program_counter << " (return to " << int(memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256) << ")" << endl;
+#endif
 			continue;
 		}
 		//Conditional call
 		if ((memory.read(program_counter) & 199) == 196)
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t" << (int)memory.read(program_counter + 2) << "\t";
-
 			string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
-
+#endif
 			__int8 cond = (memory.read(program_counter) >> 3) & 7;
-
+#ifdef DEBUG
 			if (cond == 0) flags = "[NOT Zero]" + flags;
 			if (cond == 1) flags = "[Zero]" + flags;
 			if (cond == 2) flags = "[No Carry]" + flags;
@@ -1917,14 +2004,16 @@ int main(int argc, char* argv[]) {
 			if (cond == 5) flags = "[Parity]" + flags;
 			if (cond == 6) flags = "[Plus]" + flags;
 			if (cond == 7) flags = "[Minus]" + flags;
-
+#endif
 			if (cond == 0 && !Flag_Zero)  //call if NOT zero
 			{
 				memory.write(stack_pointer - 1, (program_counter + 3) >> 8);
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG	
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 1 && Flag_Zero)  //call if Zero
@@ -1933,7 +2022,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 2 && !Flag_Carry)  //call if CY = 0
@@ -1942,7 +2033,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 3 && Flag_Carry)  //call if CY = 1
@@ -1951,7 +2044,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 4 && !Flag_Parity)  //call if Not Parity (odd)
@@ -1960,7 +2055,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 5 && Flag_Parity)  //call if Parity (even)
@@ -1969,7 +2066,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 6 && !Flag_Sign)  //call if +
@@ -1978,7 +2077,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 7 && Flag_Sign)  //call if -
@@ -1987,10 +2088,14 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 2, (program_counter + 3) & 255);
 				stack_pointer -= 2;
 				program_counter = memory.read(program_counter + 1) + memory.read(program_counter + 2) * 256;
+#ifdef DEBUG
 				if (log_to_console) cout << "cond CALL " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
+#ifdef DEBUG		
 			if (log_to_console) cout << "cond Call [deny]" << flags << endl;
+#endif
 			program_counter += 3;
 			continue;
 		}
@@ -1999,17 +2104,19 @@ int main(int argc, char* argv[]) {
 		{
 			program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 			stack_pointer += 2;
+#ifdef DEBUG
 			SetConsoleTextAttribute(hConsole, 0x17);
 			if (log_to_console) cout << "\t\tRET to " << (int)program_counter << endl;
 			SetConsoleTextAttribute(hConsole, 7);
+#endif
 			continue;
 		}
 		//Conditional return
 		if ((memory.read(program_counter) & 199) == 192)
 		{
-			string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
-
 			__int8 cond = (memory.read(program_counter) >> 3) & 7;
+#ifdef DEBUG			
+			string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 			if (cond == 0) flags = "[NOT Zero]" + flags;
 			if (cond == 1) flags = "[Zero]" + flags;
 			if (cond == 2) flags = "[No Carry]" + flags;
@@ -2018,64 +2125,82 @@ int main(int argc, char* argv[]) {
 			if (cond == 5) flags = "[Parity]" + flags;
 			if (cond == 6) flags = "[Plus]" + flags;
 			if (cond == 7) flags = "[Minus]" + flags;
-
+#endif
 			if (cond == 0 && !Flag_Zero)  //RET if NOT zero
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 1 && Flag_Zero)  //RET if Zero
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 2 && !Flag_Carry)  //RET if CY = 0
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 3 && Flag_Carry)  //RET if CY = 1
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 4 && !Flag_Parity)  //RET if Not Parity (odd)
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 5 && Flag_Parity)  //RET if Parity (even)
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 6 && !Flag_Sign)  //RET if +
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
 			if (cond == 7 && Flag_Sign)  //RET if -
 			{
 				program_counter = memory.read(stack_pointer) + memory.read(stack_pointer + 1) * 256;
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tcond RET to " << (int)program_counter << flags << endl;
+#endif
 				continue;
 			}
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tcond RET[deny]" << flags << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -2083,7 +2208,9 @@ int main(int argc, char* argv[]) {
 		if ((memory.read(program_counter) & 199) == 233)
 		{
 			program_counter = registers[4] * 256 + registers[5];
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tJump to [HL] " << program_counter << endl;
+#endif
 			continue;
 		}
 		// =================  Stack, !/0, and Machine Contro! Group  ===================
@@ -2098,7 +2225,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 1, registers[0]);
 				memory.write(stack_pointer - 2, registers[1]);
 				stack_pointer -= 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tPUSH BC(" << registers[1] + registers[0] * 256 << ")" << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -2108,7 +2237,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 1, registers[2]);
 				memory.write(stack_pointer - 2, registers[3]);
 				stack_pointer -= 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tPUSH DE(" << registers[3] + registers[2] * 256 << ")" << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -2118,7 +2249,9 @@ int main(int argc, char* argv[]) {
 				memory.write(stack_pointer - 1, registers[4]);
 				memory.write(stack_pointer - 2, registers[5]);
 				stack_pointer -= 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tPUSH HL(" << registers[5] + registers[4] * 256 << ")" << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -2129,7 +2262,9 @@ int main(int argc, char* argv[]) {
 			memory.write(stack_pointer - 1, registers[7]);
 			memory.write(stack_pointer - 2, (Flag_Sign << 7 | Flag_Zero << 6 | Flag_A_Carry << 4 | Flag_Parity << 2 | 2 | Flag_Carry));
 			stack_pointer -= 2;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tPUSH PSW  " << (bitset<8>)(Flag_Sign << 7 | Flag_Zero << 6 | Flag_A_Carry << 4 | Flag_Parity << 2 | 2 | Flag_Carry) << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -2144,7 +2279,9 @@ int main(int argc, char* argv[]) {
 				registers[0] = memory.read(stack_pointer + 1);
 				registers[1] = memory.read(stack_pointer);
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tPOP BC(" << registers[1] + registers[0] * 256 << ")" << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -2154,7 +2291,9 @@ int main(int argc, char* argv[]) {
 				registers[2] = memory.read(stack_pointer + 1);
 				registers[3] = memory.read(stack_pointer);
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tPOP DE(" << registers[3] + registers[2] * 256 << ")" << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -2164,7 +2303,9 @@ int main(int argc, char* argv[]) {
 				registers[4] = memory.read(stack_pointer + 1);
 				registers[5] = memory.read(stack_pointer);
 				stack_pointer += 2;
+#ifdef DEBUG
 				if (log_to_console) cout << "\t\tPOP HL(" << registers[5] + registers[4] * 256 << ")" << endl;
+#endif
 				program_counter += 1;
 				continue;
 			}
@@ -2178,9 +2319,10 @@ int main(int argc, char* argv[]) {
 			Flag_A_Carry = (memory.read(stack_pointer) >> 4) & 1;
 			Flag_Parity = (memory.read(stack_pointer) >> 2) & 1;
 			Flag_Carry = memory.read(stack_pointer) & 1;
-
 			stack_pointer += 2;
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tPOP PSW " << (bitset<8>)(Flag_Sign << 7 | Flag_Zero << 6 | Flag_A_Carry << 4 | Flag_Parity << 2 | 2 | Flag_Carry) << endl;
+#endif
 			program_counter += 1;
 			continue;
 		}
@@ -2193,7 +2335,10 @@ int main(int argc, char* argv[]) {
 			registers[4] = memory.read(stack_pointer + 1);
 			memory.write(stack_pointer, temp_L);
 			memory.write(stack_pointer + 1, temp_H);
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tXTHL" << endl;
+#endif
+			
 			program_counter += 1;
 			continue;
 		}
@@ -2201,21 +2346,30 @@ int main(int argc, char* argv[]) {
 		if (memory.read(program_counter) == 249)
 		{
 			stack_pointer = registers[4] * 256 + registers[5];
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tLoad HL to SP" << endl;
+#endif
+			
 			program_counter += 1;
 			continue;
 		}
 		//Input from port
 		if (memory.read(program_counter) == 219)
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tInput from port" << endl;
+#endif
+			
 			program_counter++;
 			continue;
 		}
 		//OUT port
 		if (memory.read(program_counter) == 211)
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << "\t\tOutput to port" << endl;
+#endif
+			
 			program_counter++;
 			continue;
 		}
@@ -2223,7 +2377,9 @@ int main(int argc, char* argv[]) {
 		if (memory.read(program_counter) == 251)
 		{
 			Interrupts_enabled = true;
+#ifdef DEBUG
 			if (log_to_console) cout << "interrupts ON" << endl;
+#endif
 			speaker.beep_on();
 			program_counter++;
 			continue;
@@ -2232,7 +2388,9 @@ int main(int argc, char* argv[]) {
 		if (memory.read(program_counter) == 243)
 		{
 			Interrupts_enabled = false;
+#ifdef DEBUG
 			if (log_to_console) cout << "interrupts OFF" << endl;
+#endif
 			speaker.beep_off();
 			program_counter++;
 			continue;
@@ -2240,7 +2398,9 @@ int main(int argc, char* argv[]) {
 		// HLT (Halt)
 		if (memory.read(program_counter) == 118)
 		{
+#ifdef DEBUG
 			if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t\t" << "HALT" << endl;
+#endif
 			break;
 		}
 		SetConsoleTextAttribute(hConsole, 4);
@@ -2290,8 +2450,8 @@ void print_all()
 void Video_device::sync(int elapsed_ms)
 {
 	//цикл отрисовки экрана
-	unsigned int start = 0x77c2;			//сам экран
-	if (RAM_amount == 16) start = 0x37c2;   //для версии 16К
+	unsigned int start = 0x77c2 - 78 - 1;			//сам экран
+	if (RAM_amount == 16) start = 0x37c2 - 78 - 1;   //для версии 16К
 	//unsigned int start = 0x75E6;   //захват области переменных
 	//unsigned int start = 0x7600;   //область экрана 30208
 
@@ -2319,31 +2479,28 @@ void Video_device::sync(int elapsed_ms)
 	bool attr_blink = false;       //атрибут мигания
 	bool attr_highlight = false;   //атрибут подсветки
 
-	for (int y = -1; y < 25 + 1; y++)  //25
+	//отрисовка экрана
+	for (int y = 0; y < 25 + 2; y++)  //25
 	{
-		for (int x = -1; x < 64 + 1; x++)  //64
+		for (int x = 0; x < 64 + 2; x++)  //64
 		{
 			addr = start + y * (64 + 14) + x;
-			if ((y >= 5 && y < 30 && x >= 8 && x < 72) || 1)
-			{
-				//область экрана
 
-				if (y >= 0 && y < 25 && x >= 0 && x < 64) sym_code = memory.read(addr);
-				else sym_code = 0; // область по краям экрана
-				//sym_code = y;
-
+				sym_code = memory.read(addr) & 127; // считываем символ и обнуляем старший бит
 				font_t_y = sym_code >> 4;
 				font_t_x = sym_code - (font_t_y << 4);
+				
+				//фон экрана
 				font_sprite.setTextureRect(sf::IntRect(sf::Vector2i(0, 384), sf::Vector2i(48, 60)));
-				font_sprite.setPosition(sf::Vector2f((x + 1) * 36, (y + 1) * 60));
+				font_sprite.setPosition(sf::Vector2f((x + 0) * 36, (y + 0) * 60));
 				font_sprite.setScale(sf::Vector2f(1, 1));
 				main_window.draw(font_sprite);
 
-				if (cursor_x - 8 == x && cursor_y - 3 == y && video_enable && cursor_flipflop)
+				if (cursor_x == x + 7 && cursor_y == y + 2 && video_enable && cursor_flipflop)
 				{
 					//рисуем курсор в позиции
 					font_sprite.setTextureRect(sf::IntRect(sf::Vector2i(15 * 48 + 48 * 0.25, 5 * 48), sf::Vector2i(48 * 0.75, 48)));
-					font_sprite.setPosition(sf::Vector2f((x + 1) * 36, (y + 1) * 60));
+					font_sprite.setPosition(sf::Vector2f((x + 0) * 36, (y + 0) * 6 * line_height));
 					main_window.draw(font_sprite);
 				}
 
@@ -2351,14 +2508,15 @@ void Video_device::sync(int elapsed_ms)
 				{
 					if (attr_under) //подчеркивание
 					{
+						
 						font_sprite.setTextureRect(sf::IntRect(sf::Vector2i(15 * 48 + 48 * 0.25, 5 * 48 + 36), sf::Vector2i(48 * 0.75, 6)));
-						font_sprite.setPosition(sf::Vector2f((x + 1) * 36, (y + 1) * 60 + 6 * under_line_pos)); //рисуем на позиции подчеркивания
+						font_sprite.setPosition(sf::Vector2f((x + 0) * 36, (y + 0) * 6 * line_height + 6 * (min(under_line_pos, line_height) - 1))); //рисуем на позиции подчеркивания
 						main_window.draw(font_sprite);
 					}
 
 					if (!attr_blink || cursor_flipflop) { //с учетом атрибута мигания
 						font_sprite.setTextureRect(sf::IntRect(sf::Vector2i(font_t_x * 48 + 48 * 0.25 + attr_highlight * 768, font_t_y * 48), sf::Vector2i(48 * 0.75, 48)));
-						font_sprite.setPosition(sf::Vector2f((x + 1) * 36, (y + 1) * 60));
+						font_sprite.setPosition(sf::Vector2f((x + 0) * 36, (y + 0) * 6 * line_height));
 						main_window.draw(font_sprite);
 					}
 				}
@@ -2371,7 +2529,7 @@ void Video_device::sync(int elapsed_ms)
 						if (alt_code < 11)
 						{
 							font_sprite.setTextureRect(sf::IntRect(sf::Vector2i(48 + alt_code * 48, 384), sf::Vector2i(48, 48)));
-							font_sprite.setPosition(sf::Vector2f((x + 1) * 36, (y + 1) * 60));
+							font_sprite.setPosition(sf::Vector2f((x + 0) * 36, (y + 0) * 6 * line_height));
 							font_sprite.setScale(sf::Vector2f(1, 1 * 0.75));
 							main_window.draw(font_sprite);
 						}
@@ -2388,6 +2546,7 @@ void Video_device::sync(int elapsed_ms)
 							if ((sym_code & 32) == 32) attr_under = true;
 							if ((sym_code & 2) == 2) attr_blink = true;
 							if (sym_code & 1) attr_highlight = true;
+							
 						}
 						else
 						{
@@ -2401,17 +2560,7 @@ void Video_device::sync(int elapsed_ms)
 						}
 					}
 				}
-			}
-			else
-			{
-				//область за экраном
-				// mem_num = memory.read(addr);
-				if (mem_num & 0) {
-					text.setString(int_to_hex(mem_num));
-					text.setPosition(sf::Vector2f(x * 36, y * 60));
-					main_window.draw(text);
-				}
-			}
+
 		}
 	}
 	if (RUSLAT_LED) {
@@ -2425,62 +2574,65 @@ void Video_device::sync(int elapsed_ms)
 		//text.setCharacterSize(40);
 		text.setString("LAT");
 	}
-	text.setPosition(sf::Vector2f(14, 1565));
+	text.setPosition(sf::Vector2f(30, 36 * 60));
 	main_window.draw(text);
 	if (!step_mode && elapsed_ms) {
 
 		//обновляем массив времени кадра
 		speed_history[0]++;
-		if (speed_history[0] >= 10) speed_history[0] = 1;
-		speed_history[speed_history[0]] = floor(op_counter * 1000000 / elapsed_ms + 1);
+		if (speed_history[0] >= 32) speed_history[0] = 1;
+		speed_history[speed_history[0]] = floor(op_counter * (1000000.0 / elapsed_ms) + 1);
+		//cout << dec << speed_history[speed_history[0]] << hex << endl;
 		//рассчитываем среднее время кадра
 		int avg_speed = 0;
-		for (int i = 1; i <= 10; i++) avg_speed += speed_history[i];
-		avg_speed = avg_speed / 10;
+		for (int i = 1; i <= 32; i++) avg_speed += speed_history[i];
+		avg_speed = (avg_speed >> 8) << 3;
 		text_speed.setFillColor(sf::Color::White);
 		//text_speed.setCharacterSize(40);
-		text_speed.setString(to_string(avg_speed) + (string)" op/sec ");
-		text_speed.setPosition(sf::Vector2f(200, 1565));
+		text_speed.setString(to_string(avg_speed) + " op/sec ");
+		text_speed.setPosition(sf::Vector2f(200, 26 * 60));
 		main_window.draw(text_speed);
 	}
 
 	if (step_mode) text.setString("STEP ON");
 	else text.setString("STEP OFF");
-	text.setPosition(sf::Vector2f(700, 1565));
+	text.setPosition(sf::Vector2f(700, 26 * 60));
 	text.setFillColor(sf::Color::White);
 	main_window.draw(text);
 
 	if (log_to_console) text.setString("LOG ON");
 	else text.setString("LOG OFF");
-	text.setPosition(sf::Vector2f(900, 1565));
+	text.setPosition(sf::Vector2f(1000, 26 * 60));
 	text.setFillColor(sf::Color::White);
 	main_window.draw(text);
 
 	if (step_mode)
 	{
 		text.setString("PC = " + int_to_hex(program_counter));
-		text.setPosition(sf::Vector2f(1100, 1565));
+		text.setPosition(sf::Vector2f(1200, 26 * 60));
 		text.setFillColor(sf::Color::White);
 		main_window.draw(text);
 	}
 
 	if (RAM_amount == 16) text.setString("VIDEO 16K");
 	else text.setString("VIDEO 32K");
-	text.setPosition(sf::Vector2f(1500, 1565));
+	text.setPosition(sf::Vector2f(1500, 26 * 60));
 	text.setFillColor(sf::Color::White);
 	main_window.draw(text);
 
+
 	//вывод позиции курсора
-	text.setString("(" + to_string((memory.read(0x7602) - 8)) + " " + to_string((memory.read(0x7603) - 3)) + ")");
-	text.setPosition(sf::Vector2f(1750, 1565));
+	text.setString("(X=" + to_string((memory.read(0x7602))) + " Y=" + to_string((memory.read(0x7603))) + ")");
+	text.setPosition(sf::Vector2f(1750, 26 * 60));
 	text.setFillColor(sf::Color::White);
 	main_window.draw(text);
+
 
 	//вывод частоты звука
 #ifdef DEBUG
 	if (speaker.get_frequancy() == 0) text.setString(tmp_s);
 	else { tmp_s = to_string(speaker.get_frequancy()) + " Hz";  text.setString(tmp_s); }
-	text.setPosition(sf::Vector2f(2000, 1565));
+	text.setPosition(sf::Vector2f(2000, 26 * 60));
 	text.setFillColor(sf::Color::Yellow);
 	main_window.draw(text);
 #endif	
@@ -2490,13 +2642,18 @@ void Video_device::sync(int elapsed_ms)
 	attr_under = false;
 
 	//вывод комментариев
+#ifdef DEBUG
 	text.setString(comm1 + "    " + comm2);
 	text.setPosition(sf::Vector2f(100, 1365));
 	text.setFillColor(sf::Color::Yellow);
 	main_window.draw(text);
-
-
-
+#endif	
+	/*
+	text.setString("lines " + to_string(display_lines) + "  col " + to_string(display_columns) + " | line_height " + to_string(line_height));
+	text.setPosition(sf::Vector2f(30, 1560));
+	text.setFillColor(sf::Color::Yellow);
+	main_window.draw(text);
+	*/
 
 	main_window.display();
 	int_request = true;//устанавливаем флаг в конце кадра
@@ -2506,8 +2663,8 @@ void Video_device::sync(int elapsed_ms)
 Video_device::Video_device()   // конструктор класса
 {
 	//инициализируем графические константы
-	GAME_WINDOW_X_RES = (64 + 2) * 6 * 6 + 12; //2560
-	GAME_WINDOW_Y_RES = (25 + 2) * 10 * 6 + 0; //1440
+	GAME_WINDOW_X_RES = (64 + 2 + 0) * 6 * 6 + 0; //
+	GAME_WINDOW_Y_RES = (25 + 2 + 0) * 10 * 6 + 0; // поставим 30 линий
 
 	//получаем данные о текущем дисплее
 	my_display_H = sf::VideoMode::getDesktopMode().size.y;
@@ -2620,7 +2777,7 @@ void Video_device::set_param(unsigned __int8 data)	//параметры кома
 			//7 бит - режим символов 0 - нормальные, 1 - spaced (хз что это)
 
 			// биты 6-0 - количество столбцов
-			if ((data & 127) + 1 <= 80) display_columns = data;
+			if ((data & 127) + 1 <= 80) display_columns = (data & 127) + 1;
 			else improper_command = true;
 			count_param--;
 			//cout << "display_columns = " << dec << (int)display_columns << hex << endl;
@@ -2682,7 +2839,6 @@ unsigned __int8 Video_device::get_params() //запрос параметров
 {
 	return 0; //чтение PREG
 }
-
 
 //определение методов клавиатуры
 
@@ -2809,95 +2965,92 @@ void KBD::port_A_input(__int8 data)
 
 void Mem_Ctrl::write(unsigned __int16 address, unsigned __int8 data)
 {
-	address = address & (256 * 256 - 1);
-	//cout << hex;
+	//address = address & (256 * 256 - 1);
+	//cout << hex << address << endl;
 	// if ((address >> 12) == 8) cout << "port = " << (int)address << " write " << (int)data << endl;
-
-	if (address == 0x8002) {
-		//запись в порт С
-		if ((data & 8) == 8) {
-			RUSLAT_LED = true; //cout << "LED ON" << endl;    //зажигаем диод
-		}
-		if ((data & 8) == 0) {
-			RUSLAT_LED = false; //cout << "LED OFF" << endl;            //гасим диод
-		}
-		return;
-	}
-
-	if (address == 0x8003) {
-		//запись управляющего слова D20
-		//cout << "8003 = " << (bitset<8>)data << endl;
-		return;
-	}
-
-	if (address == 0x8000) {
-		//cout << "KB write 8000 = " << (bitset<8>)data << endl; //скан клавиатуры
-		keyboard.port_A_input(data);
-		return;
-	}
-
-	if (address == 0xA003) {
-		//запись управляющего слова D14 ROM-диск
-		//cout << "A003 = " << (bitset<8>)data << endl;
-		//step_mode = true;
-		return;
-	}
-
-	if (address == 0xA001) {
-		//cout << "A0001 -> " << (int)data << endl;
-		HDD.set_addr_low(data);
-		//step_mode = true;
-		//log_to_console = true;
-		return;
-	}
-
-	if (address == 0xA002) {
-		//cout << "A0002 -> " << (int)data << endl;
-		HDD.set_addr_high(data);
-		//step_mode = true;
-		//log_to_console = true;
-		return;
-	}
-
-	if (address == 0xC001) {
-		//cout << "monitor set command " << (bitset<8>)data << endl;
-		monitor.set_command(data);
-		//step_mode = true;
-		//log_to_console = true;
-		return;
-	}
-
-	if (address == 0xC000) {
-		//cout << "monitor set params " << (bitset<8>)data << endl;
-		monitor.set_param(data);
-		//step_mode = true;
-		//log_to_console = true;
-		return;
-	}
-
-	if (address > size(mem_array))
+	if (address >> 15)
 	{
-		global_error = 1;
+		if (address == 0x8002) {
+			//запись в порт С
+			if ((data & 8) == 8) {
+				RUSLAT_LED = true; //cout << "LED ON" << endl;    //зажигаем диод
+			}
+			if ((data & 8) == 0) {
+				RUSLAT_LED = false; //cout << "LED OFF" << endl;            //гасим диод
+			}
+			return;
+		}
+
+		if (address == 0x8003) {
+			//запись управляющего слова D20
+			//cout << "8003 = " << (bitset<8>)data << endl;
+			return;
+		}
+
+		if (address == 0x8000) {
+			//cout << "KB write 8000 = " << (bitset<8>)data << endl; //скан клавиатуры
+			keyboard.port_A_input(data);
+			return;
+		}
+
+		if (address == 0xA003) {
+			//запись управляющего слова D14 ROM-диск
+			//cout << "A003 = " << (bitset<8>)data << endl;
+			//step_mode = true;
+			return;
+		}
+
+		if (address == 0xA001) {
+			//cout << "A0001 -> " << (int)data << endl;
+			HDD.set_addr_low(data);
+			//step_mode = true;
+			//log_to_console = true;
+			return;
+		}
+
+		if (address == 0xA002) {
+			//cout << "A0002 -> " << (int)data << endl;
+			HDD.set_addr_high(data);
+			//step_mode = true;
+			//log_to_console = true;
+			return;
+		}
+
+		if (address == 0xC001) {
+			//cout << "monitor set command " << (bitset<8>)data << endl;
+			monitor.set_command(data);
+			//step_mode = true;
+			//log_to_console = true;
+			return;
+		}
+
+		if (address == 0xC000) {
+			//cout << "monitor set params " << (bitset<8>)data << endl;
+			monitor.set_param(data);
+			//step_mode = true;
+			//log_to_console = true;
+			return;
+		}
 	}
-	else
-	{
-		mem_array[address] = data;
-		//cout << "write at " << (int)address << " " << (int)data << endl;
-	}
+	else mem_array[address] = data;
+
+}
+
+void Mem_Ctrl::flash_rom(unsigned __int16 address, unsigned __int8 data)
+{
+	mem_array[address] = data;
 }
 
 unsigned __int8 Mem_Ctrl::read(unsigned __int16 address)
 {
 	//if ((address >> 12) == 8) cout << "port = " << (int)address << " read " << endl;
 
-	if (address > size(mem_array))
+	if (!address >> 15)
 	{
-		cout << "ERROR illegal address";
-		return 0;
+		return mem_array[address];
 	}
 	else
 	{
-
 		if (address == 0x8003) return 0; // считывать данные из этого порта нельзя
 
 		//проверяем не указан ли порт 8002 (управляющие клавиши клавиатуры и магнитофон)
@@ -3030,7 +3183,7 @@ void SoundMaker::sync()	//счетчик тактов
 		//empty = true;
 	}
 
-	if (sound_timer.getElapsedTime().asMicroseconds() < 200000) return; //выход, если таймер слишком мал
+	if (sound_timer.getElapsedTime().asMicroseconds() < 20000) return; //выход, если таймер слишком мал
 	sound_timer.restart();
 
 	int f = get_frequancy(); //получаем текущую частоту
@@ -3040,15 +3193,21 @@ void SoundMaker::sync()	//счетчик тактов
 	for (int i = 0; i < sample_size; i++)
 	{
 		//f = 300;
-		float step = 8000.0 / f;			//период частоты в отсчетах
-		float a = i / step * 3.1415;        //угол
-		float h =  (sin(a) - 0.5) * 20000 + 10000;
-		sound_sample[i] = floor(h) * sin(3.1415 * i / sample_size);  //=SIN(3,14*A11/B11)
+		float h;
+		int h_max = 20000; //максимальная амплитуда
+		int step = (floor(8000.0 / f)) * 2;			//период частоты в отсчетах
+		//float a = i / step * 3.1415;			//угол
+		//h =  (sin(a) - 0.5) * 20000 + 10000;  //синус
+		int mini_step = i % step;
+		if (mini_step < step / 2) h = h_max;
+		else h = -h_max;
+		//sound_sample[i] = floor(h) * sin(3.1415 * i / sample_size);  //синус
+		sound_sample[i] = h * sin(3.1415 * i / sample_size);  //квадрат
 	}
 	//monitor.comm2 = "  freq " + to_string(f);
 
 	//очистка буфера
-	for (int i = 0; i < 14; i++) waves[i] = 0;
+	for (int i = 0; i < 20; i++) waves[i] = 0;
 	empty = true; pointer = 0;
 
 	audio_stream.buffer_ready = true;
@@ -3070,7 +3229,7 @@ void SoundMaker::beep_on()     //сигнал ВКЛ
 	if (signal_on != 1)
 	{
 		pointer++;
-		if (pointer == 8) pointer = 0;
+		if (pointer == 20) pointer = 0;
 	}
 	signal_on = 1;
 	silense_dur = 0;
@@ -3084,7 +3243,7 @@ void SoundMaker::beep_off()    //сигнал ВЫКЛ
 	if (signal_on != 0)
 	{
 		pointer++;
-		if (pointer == 8) pointer = 0;
+		if (pointer == 20) pointer = 0;
 	}
 	signal_on = 0;
 	silense_dur = 0;
@@ -3101,7 +3260,7 @@ int SoundMaker::get_frequancy()
 	int sum = 0;	//сумма
 	int count = 0;  //кол-во чисел
 	//cout << "array ";
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 20; i++)
 	{
 		//cout << (int)waves[i] << "  ";
 		if (waves[i] && i!=pointer)
@@ -3114,8 +3273,8 @@ int SoundMaker::get_frequancy()
 	if (!count) return 0;
 	//cout << to_string((int)floor(85000 * count / sum)) << endl;
 	int f = floor(42000 * count / sum);
-	//if (f < 200) f = 200;
-	//if (f > 2000) f = 1600;
+	if (f < 100) f = 100;
+	if (f > 2000) f = 2000;
 	return f;
 }
 
@@ -3136,7 +3295,7 @@ bool MyAudioStream::onGetData(Chunk& data)
 
 void MyAudioStream::onSeek(sf::Time timeOffset)
 {
-
+	return;
 }
 
 void syscallF809()
