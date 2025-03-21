@@ -19,7 +19,7 @@ Example:
 
 */
 
-//#define DEBUG
+#define DEBUG
 
 //#include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
@@ -247,14 +247,14 @@ vector<comment> comments; //комментарии к программе
 //string filename_ROM = "test86rk.txt";   //программа проверки из журнала
 //string filename_ROM = "test.txt";		  //отладка команд
 //string filename_ROM = "memtest32.txt";  //типовой тест памяти
-//tring filename_ROM = "86RK32.txt";	  //типовая прошивка
-string filename_ROM = "86RK32fix.txt";  //исправленная прошивка
+string filename_ROM = "86RK32.txt";	  //типовая прошивка
+//string filename_ROM = "86RK32fix.txt";  //исправленная прошивка
 //string filename_ROM = "bios16.txt";     //прошивка с сайта rk86.ru
 
 // HDD
 
 //string filename_HDD = "1_CHERV.txt";		//  0000 - норм
-//string filename_HDD = "klad.txt";			//  0000 - норм
+string filename_HDD = "klad.txt";			//  0000 - норм
 //string filename_HDD = "glass1.txt";		//  0000 - норм
 //string filename_HDD = "diverse.txt";		//  0000 - норм
 //string filename_HDD = "vmemtest.txt";		//  0000 - тест видеопамяти
@@ -268,6 +268,7 @@ string filename_ROM = "86RK32fix.txt";  //исправленная прошив�
 //string filename_HDD = "stena.txt";		//	0000 - норм
 //string filename_HDD = "pi80.txt";			//	4200 - норм
 //string filename_HDD = "zmeya.txt";		//	0000 - норм
+//string filename_HDD = "pack.txt";			//	1800 - норм
 
 
 unsigned __int16 program_counter = 0xf800;  // первая команда при старте ПК
@@ -526,6 +527,10 @@ void op_code_SPHL();		//SPHL (Move HL to SP)
 void op_code_IN_Port();		//IN port
 void op_code_OUT_Port();	//OUT port
 void op_code_HLT();			//HLT (Halt)
+
+//функция проверки четности
+bool parity_check[256] = { 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1 };
+
 
 int main(int argc, char* argv[]) {
 #ifdef DEBUG
@@ -2459,7 +2464,7 @@ void op_code_ADD_B()		// ADD (B)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + B(" << registers[0] << ") = " << registers[7] << endl;
 #endif
@@ -2475,7 +2480,7 @@ void op_code_ADD_C()		// ADD (C)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + C(" << registers[1] << ") = " << registers[7] << endl;
 #endif
@@ -2491,7 +2496,7 @@ void op_code_ADD_D()		// ADD (D)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + D(" << registers[2] << ") = " << registers[7] << endl;
 #endif
@@ -2507,7 +2512,7 @@ void op_code_ADD_E()		// ADD (E)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + E(" << registers[3] << ") = " << registers[7] << endl;
 #endif
@@ -2523,7 +2528,7 @@ void op_code_ADD_H()		// ADD (H)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + H(" << registers[4] << ") = " << registers[7] << endl;
 #endif
@@ -2539,7 +2544,7 @@ void op_code_ADD_L()		// ADD (L)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + L(" << registers[5] << ") = " << registers[7] << endl;
 #endif
@@ -2556,7 +2561,7 @@ void op_code_ADD_M()		// ADD (M)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) {
 		cout << "\t\tADD A + M(" << (int)memory.read(temp_Addr) << ") at [";
@@ -2578,7 +2583,7 @@ void op_code_ADD_A()		// ADD (A)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + A(" << registers[7] << ") = " << registers[7] << endl;
 #endif
@@ -2594,7 +2599,7 @@ void op_code_ADD_I()	// ADD IMM
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\tADD A + IMM(" << (int)memory.read(program_counter + 1) << ") = " << registers[7] << endl;
 #endif
@@ -2611,7 +2616,7 @@ void op_code_ADC_B()		// ADD (B) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + B + CY = " << registers[7] << endl;
 #endif
@@ -2627,7 +2632,7 @@ void op_code_ADC_C()		// ADD (C) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + C + CY = " << registers[7] << endl;
 #endif
@@ -2643,7 +2648,7 @@ void op_code_ADC_D()		// ADD (D) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + D + CY = " << registers[7] << endl;
 #endif
@@ -2659,7 +2664,7 @@ void op_code_ADC_E()		// ADD (E) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + E + CY = " << registers[7] << endl;
 #endif
@@ -2675,7 +2680,7 @@ void op_code_ADC_H()		// ADD (H) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + H + CY = " << registers[7] << endl;
 #endif
@@ -2691,7 +2696,7 @@ void op_code_ADC_L()		// ADD (L) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + L + CY = " << registers[7] << endl;
 #endif
@@ -2708,7 +2713,7 @@ void op_code_ADC_M()		// ADD (M) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) {
 		cout << "\t\tADD A + M(" << (int)memory.read(temp_Addr) << ") at [";
@@ -2730,7 +2735,7 @@ void op_code_ADC_A()		// ADD (A) with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tADD A + A + CY = " << registers[7] << endl;
 #endif
@@ -2746,7 +2751,7 @@ void op_code_ADC_I()		// ADD IMM with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = registers[7] >> 7;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 	if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t\tADD A + IMM(" << (int)memory.read(program_counter + 1) << ") + CY = " << registers[7] << endl;
 	program_counter += 2;
 }
@@ -2761,7 +2766,7 @@ void op_code_SUB_B()		// SUB (B)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - B = " << registers[7] << endl;
 #endif
@@ -2777,7 +2782,7 @@ void op_code_SUB_C()		// SUB (C)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - C = " << registers[7] << endl;
 #endif
@@ -2793,7 +2798,7 @@ void op_code_SUB_D()		// SUB (D)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - C = " << registers[7] << endl;
 #endif
@@ -2809,7 +2814,7 @@ void op_code_SUB_E()		// SUB (E)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - D = " << registers[7] << endl;
 #endif
@@ -2825,7 +2830,7 @@ void op_code_SUB_H()		// SUB (H)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - H = " << registers[7] << endl;
 #endif
@@ -2841,7 +2846,7 @@ void op_code_SUB_L()		// SUB (L)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - L = " << registers[7] << endl;
 #endif
@@ -2858,7 +2863,7 @@ void op_code_SUB_M()		// SUB (M)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) {
 		cout << (int)memory.read(program_counter + 1) << "\t\tSUB A - M(" << (int)memory.read(temp_Addr) << ") at [";
@@ -2880,7 +2885,7 @@ void op_code_SUB_A()		// SUB (A)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - A = " << registers[7] << endl;
 #endif
@@ -2896,7 +2901,7 @@ void op_code_SUB_I()		// SUB IMM
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << (int)memory.read(program_counter + 1) << "\t\tSUB A - IMM(" << (int)memory.read(program_counter + 1) << ") = " << registers[7] << endl;
 #endif			
@@ -2913,7 +2918,7 @@ void op_code_SBB_B()		// SUB (B)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - B - CY = " << registers[7] << endl;
 #endif
@@ -2929,7 +2934,7 @@ void op_code_SBB_C()		// SUB (C)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - C - CY = " << registers[7] << endl;
 #endif
@@ -2945,7 +2950,7 @@ void op_code_SBB_D()		// SUB (D)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - D - CY = " << registers[7] << endl;
 #endif
@@ -2961,7 +2966,7 @@ void op_code_SBB_E()		// SUB (E)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - E - CY = " << registers[7] << endl;
 #endif
@@ -2977,7 +2982,7 @@ void op_code_SBB_H()		// SUB (H)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - H - CY = " << registers[7] << endl;
 #endif
@@ -2993,7 +2998,7 @@ void op_code_SBB_L()		// SUB (L)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A -L - CY = " << registers[7] << endl;
 #endif
@@ -3010,7 +3015,7 @@ void op_code_SBB_M()		// SUB (M)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) {
 		cout << "SUB A - M(" << (int)memory.read(temp_Addr) << ") at [";
@@ -3032,7 +3037,7 @@ void op_code_SBB_A()		// SUB (A)  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - A - CY = " << registers[7] << endl;
 #endif
@@ -3048,7 +3053,7 @@ void op_code_SBB_I()		// SUB IMM  with Carry
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tSUB A - IMM(" << (int)memory.read(program_counter + 1) << ") - CY = " << registers[7] << endl;
 #endif
@@ -3062,7 +3067,7 @@ void op_code_INR_B()		// INR (B)
 	if (registers[0]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[0] >> 7) & 1;
-	Flag_Parity = ~registers[0] & 1;
+	Flag_Parity = parity_check[registers[0]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC B = " << registers[0] << endl;
 #endif
@@ -3075,7 +3080,7 @@ void op_code_INR_C()		// INR (C)
 	if (registers[1]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[1] >> 7) & 1;
-	Flag_Parity = ~registers[1] & 1;
+	Flag_Parity = parity_check[registers[1]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC C = " << registers[1] << endl;
 #endif
@@ -3088,7 +3093,7 @@ void op_code_INR_D()		// INR (D)
 	if (registers[2]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[2] >> 7) & 1;
-	Flag_Parity = ~registers[2] & 1;
+	Flag_Parity = parity_check[registers[2]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC D = " << registers[2] << endl;
 #endif
@@ -3101,7 +3106,7 @@ void op_code_INR_E()		// INR (E)
 	if (registers[3]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[3] >> 7) & 1;
-	Flag_Parity = ~registers[3] & 1;
+	Flag_Parity = parity_check[registers[3]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC E = " << registers[3] << endl;
 #endif
@@ -3114,7 +3119,7 @@ void op_code_INR_H()		// INR (H)
 	if (registers[4]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[4] >> 7) & 1;
-	Flag_Parity = ~registers[4] & 1;
+	Flag_Parity = parity_check[registers[4]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC H = " << registers[4] << endl;
 #endif
@@ -3127,7 +3132,7 @@ void op_code_INR_L()		// INR (L)
 	if (registers[5]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[5] >> 7) & 1;
-	Flag_Parity = ~registers[5] & 1;
+	Flag_Parity = parity_check[registers[5]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC L = " << registers[5] << endl;
 #endif
@@ -3141,7 +3146,7 @@ void op_code_INR_M()		// INR (M)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~temp_ACC_16 & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	memory.write(temp_Addr, (temp_ACC_16 & 255));
 #ifdef DEBUG
 	if (log_to_console) {
@@ -3160,7 +3165,7 @@ void op_code_INR_A()		// INR (A)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tINC A = " << registers[7] << endl;
 #endif
@@ -3177,7 +3182,7 @@ void op_code_DCR_B()		// DCR (B)
 	if (registers[0]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[0] >> 7) & 1;
-	Flag_Parity = ~registers[0] & 1;
+	Flag_Parity = parity_check[registers[0]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC B(" << (int)temp_ACC_8 << ") = " << (int)registers[0] << " " << flags << endl;
@@ -3194,7 +3199,7 @@ void op_code_DCR_C()		// DCR (C)
 	if (registers[1]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[1] >> 7) & 1;
-	Flag_Parity = ~registers[1] & 1;
+	Flag_Parity = parity_check[registers[1]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC C(" << (int)temp_ACC_8 << ") = " << (int)registers[1] << " " << flags << endl;
@@ -3211,7 +3216,7 @@ void op_code_DCR_D()		// DCR (D)
 	if (registers[2]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[2] >> 7) & 1;
-	Flag_Parity = ~registers[2] & 1;
+	Flag_Parity = parity_check[registers[2]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC D(" << (int)temp_ACC_8 << ") = " << (int)registers[2] << " " << flags << endl;
@@ -3228,7 +3233,7 @@ void op_code_DCR_E()		// DCR (E)
 	if (registers[3]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[3] >> 7) & 1;
-	Flag_Parity = ~registers[3] & 1;
+	Flag_Parity = parity_check[registers[3]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC E(" << (int)temp_ACC_8 << ") = " << (int)registers[3] << " " << flags << endl;
@@ -3245,7 +3250,7 @@ void op_code_DCR_H()		// DCR (H)
 	if (registers[4]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[4] >> 7) & 1;
-	Flag_Parity = ~registers[4] & 1;
+	Flag_Parity = parity_check[registers[4]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC H(" << (int)temp_ACC_8 << ") = " << (int)registers[4] << " " << flags << endl;
@@ -3262,7 +3267,7 @@ void op_code_DCR_L()		// DCR (L)
 	if (registers[5]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[5] >> 7) & 1;
-	Flag_Parity = ~registers[5] & 1;
+	Flag_Parity = parity_check[registers[5]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC L(" << (int)temp_ACC_8 << ") = " << (int)registers[5] << " " << flags << endl;
@@ -3281,7 +3286,7 @@ void op_code_DCR_M()		// DCR (M)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~temp_ACC_16 & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tDEC Mem(" << temp_ACC_8 << ") at " << (int)temp_Addr << " = " << (int)(temp_ACC_16 & 255) << " " << flags << endl;
@@ -3298,7 +3303,7 @@ void op_code_DCR_A()		// DCR (A)
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG	
 	string flags = "[Z=" + to_string(Flag_Zero) + " CY=" + to_string(Flag_Carry) + "CA=" + to_string(Flag_A_Carry) + " S=" + to_string(Flag_Sign) + " P=" + to_string(Flag_Parity) + "]";
 	if (log_to_console) cout << "\t\tDEC A(" << (int)temp_ACC_8 << ") = " << (int)registers[7] << " " << flags << endl;
@@ -3473,7 +3478,7 @@ void op_code_DAA()			// DAA
 	if (registers[7]) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = (~registers[7]) & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tDAA (" << (int)(registers[7] >> 4) << ")(" << (int)(registers[7] & 15) << ") CY= " << Flag_Carry << " CA= " << Flag_A_Carry << endl;
 #endif
@@ -3487,7 +3492,7 @@ void op_code_AND_B()		// AND (B)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND B = " << registers[7] << endl;
@@ -3501,7 +3506,7 @@ void op_code_AND_C()		// AND (C)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND C = " << registers[7] << endl;
@@ -3515,7 +3520,7 @@ void op_code_AND_D()		// AND (D)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND D = " << registers[7] << endl;
@@ -3529,7 +3534,7 @@ void op_code_AND_E()		// AND (E)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND E = " << registers[7] << endl;
@@ -3543,7 +3548,7 @@ void op_code_AND_H()		// AND (H)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND H = " << registers[7] << endl;
@@ -3557,7 +3562,7 @@ void op_code_AND_L()		// AND (L)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND L = " << registers[7] << endl;
@@ -3571,7 +3576,7 @@ void op_code_AND_M()		// AND (M)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) {
@@ -3591,7 +3596,7 @@ void op_code_AND_A()		// AND (A)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND A = " << registers[7] << endl;
@@ -3609,7 +3614,7 @@ void op_code_AND_IMM()  //AND immediate
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC AND IMM(" << (int)memory.read(program_counter + 1) << ") = " << registers[7] << endl;
@@ -3624,7 +3629,7 @@ void op_code_XOR_B()		// XOR (B)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR B = " << registers[7] << endl;
@@ -3639,7 +3644,7 @@ void op_code_XOR_C()		// XOR (C)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR C = " << registers[7] << endl;
@@ -3654,7 +3659,7 @@ void op_code_XOR_D()		// XOR (D)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR D = " << registers[7] << endl;
@@ -3669,7 +3674,7 @@ void op_code_XOR_E()		// XOR (E)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR E = " << registers[7] << endl;
@@ -3684,7 +3689,7 @@ void op_code_XOR_H()		// XOR (H)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR H = " << registers[7] << endl;
@@ -3699,7 +3704,7 @@ void op_code_XOR_L()		// XOR (L)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR L = " << registers[7] << endl;
@@ -3714,7 +3719,7 @@ void op_code_XOR_M()		// XOR (M)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) {
@@ -3735,7 +3740,7 @@ void op_code_XOR_A()		// XOR (A)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC XOR A = " << registers[7] << endl;
@@ -3753,7 +3758,7 @@ void op_code_XOR_IMM()  //XOR immediate
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\tXOR IMM (" << (bitset<8>)memory.read(program_counter + 1) << ") = " << (bitset<8>)registers[7] << endl;
@@ -3768,7 +3773,7 @@ void op_code_OR_B()		// OR (B)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR B = " << registers[7] << endl;
@@ -3783,7 +3788,7 @@ void op_code_OR_C()		// OR (C)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR C = " << registers[7] << endl;
@@ -3798,7 +3803,7 @@ void op_code_OR_D()		// OR (D)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR D = " << registers[7] << endl;
@@ -3813,7 +3818,7 @@ void op_code_OR_E()		// OR (E)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR E = " << registers[7] << endl;
@@ -3828,7 +3833,7 @@ void op_code_OR_H()		// OR (H)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR H = " << registers[7] << endl;
@@ -3843,7 +3848,7 @@ void op_code_OR_L()		// OR (L)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR L = " << registers[7] << endl;
@@ -3858,7 +3863,7 @@ void op_code_OR_M()		// OR (M)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) {
@@ -3879,7 +3884,7 @@ void op_code_OR_A()		// OR (A)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC OR A = " << registers[7] << endl;
@@ -3897,7 +3902,7 @@ void op_code_OR_IMM()  //OR immediate
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = (~temp_ACC_16) & 1;
+	Flag_Parity = parity_check[temp_ACC_16];
 	registers[7] = temp_ACC_16;
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tOR IMM (" << (bitset<8>)memory.read(program_counter + 1) << ") = " << (bitset<8>)registers[7] << endl;
@@ -3915,7 +3920,7 @@ void op_code_CMP_B()		// CMP (B)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with B(" << registers[0] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -3931,7 +3936,7 @@ void op_code_CMP_C()		// CMP (C)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with C(" << registers[1] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -3947,7 +3952,7 @@ void op_code_CMP_D()		// CMP (D)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with D(" << registers[2] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -3963,7 +3968,7 @@ void op_code_CMP_E()		// CMP (E)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with E(" << registers[3] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -3979,7 +3984,7 @@ void op_code_CMP_H()		// CMP (H)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with H(" << registers[4] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -3995,7 +4000,7 @@ void op_code_CMP_L()		// CMP (L)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with L(" << registers[5] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -4011,7 +4016,7 @@ void op_code_CMP_M()		// CMP (M)
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC Comp with M at " << (int)(registers[4] * 256 + registers[5]) << " Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -4023,7 +4028,7 @@ void op_code_CMP_A()		// CMP (A)
 	Flag_Carry = false;
 	Flag_Zero = true;
 	Flag_Sign = (registers[7] >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\t\tACC(" << (int)registers[7] << ") Comp with A(" << registers[7] << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
@@ -4042,7 +4047,7 @@ void op_code_CMP_IMM()		// CMP Imm
 	if (temp_ACC_16) Flag_Zero = false;
 	else Flag_Zero = true;
 	Flag_Sign = (temp_ACC_16 >> 7) & 1;
-	Flag_Parity = ~registers[7] & 1;
+	Flag_Parity = parity_check[registers[7]];
 #ifdef DEBUG
 	if (log_to_console) cout << "\tACC(" << registers[7] << ") Comp with IMM(" << (int)memory.read(program_counter + 1) << ") Z = " << Flag_Zero << " CY = " << Flag_Carry << endl;
 #endif
